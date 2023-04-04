@@ -16,6 +16,7 @@ using System.Windows.Shapes;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Text.Json;
 
 namespace Server
 {
@@ -25,9 +26,11 @@ namespace Server
     public partial class MainWindow : Window
     {
         private Socket? listenSocket;   // слушающий сокет - постоянно активный при вкл сервере
+        private List<ChatMessage> messages;  // все приходящие сообщения - сохраняются на сервере
         public MainWindow()
         {
             InitializeComponent();
+            messages = new();
         }
 
         private void StartServer_Click(object sender, RoutedEventArgs e)
@@ -76,6 +79,7 @@ namespace Server
                 {                              // 
                     Socket socket =            // Ожидание подключения и создание 
                         listenSocket.Accept(); // обменного сокета с клиентом
+                    // --------------------- соединение установлено ----------------------
                     // Начинаем прием данных
                     StringBuilder sb = new();
                     do
@@ -91,10 +95,36 @@ namespace Server
                     Dispatcher.Invoke(() =>          // Добавляем полученные данные к логам
                         serverLogs.Text +=           // сервера. Используем Dispatcher
                             str + "\n");             // для доступа к UI
+                    
+                    // Разбираем JSON
+                    var request = JsonSerializer.Deserialize<ClientRequest>(str);
+                    // Определяем тип запроса (action) и готовим ответ
+                    ServerResponse response = new();
+                    switch (request?.Action)
+                    {
+                        case "Message":
+                            // извлекаем сообщение из запроса
+                            ChatMessage message = new()
+                            {
+                                Author = request.Author,
+                                Text = request.Text,
+                                Moment = request.Moment
+                            };
+                            // сохраняем его в коллекции сервера
+                            messages.Add(message);
+                            // передаем его же как подтверждение получения
+                            response.Status = "OK";
+                            response.Messages = new() { message };
+                            break;
+                        default:
+                            response.Status = "Error";
+                            break;
+                    }
 
-                    // Отправляем клиенту ответ - отчет о получении сообщения
-                    str = "Received at " +           // В обратном порядке - 
-                        DateTime.Now;                // сначала строка
+                    // Отправляем клиенту ответ
+                    str = JsonSerializer             // В обратном порядке - 
+                        .Serialize(response,         // сначала строка
+                        new JsonSerializerOptions() { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
                     socket.Send(                     // затем переводим в байты
                         Encoding.UTF8                // по заданной кодировке
                         .GetBytes(str));             // и отправляем в сокет
@@ -119,5 +149,15 @@ namespace Server
             // Остановить бесконечный цикл можно только выбросом исключения
             listenSocket?.Close();
         }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            listenSocket?.Close();
+        }
     }
 }
+/* Д.З. Клиент: проверить на пустоту тексты сообщения и имени автора.
+ * Если пусто - выдавать сообщение и не отправлять на сервер.
+ * Если после отправки сообщения сервер возвращает статус ОК, то
+ * добавлять само сообщение в чат-лог (время: автор - текст)
+ */

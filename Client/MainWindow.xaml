@@ -13,8 +13,10 @@
             <Label Content="Port:"/>
             <TextBox x:Name="serverPort" Text="8090"/>
         </StackPanel>
-        <StackPanel Orientation="Horizontal">            
-            <Label x:Name="serverStatus" Content="Message:"/>
+        <StackPanel Orientation="Horizontal">
+            <Label Content="Nik:"/>
+            <TextBox x:Name="authorTextBox" Text="User1"/>
+            <Label Content="Message:"/>
             <TextBox x:Name="messageTextBox" Text="Hello!"/>
             <Button Content="Send" x:Name="SendButton"
                     Click="SendButton_Click"/>

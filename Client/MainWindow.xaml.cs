@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,12 +24,25 @@ namespace Client
     /// </summary>
     public partial class MainWindow : Window
     {
+        private byte[] buffer = new byte[1024];
+
         public MainWindow()
         {
             InitializeComponent();
         }
 
         private void SendButton_Click(object sender, RoutedEventArgs e)
+        {
+            ChatMessage chatMessage = new()
+            {
+                Author = authorTextBox.Text,
+                Text = messageTextBox.Text,
+                Moment = DateTime.Now
+            };
+            SendMessage(chatMessage);
+        }
+
+        private void SendMessage(ChatMessage chatMessage)
         {
             IPEndPoint endpoint;  // копия - как у сервера
             try
@@ -53,27 +68,43 @@ namespace Client
             try
             {
                 clientSocket.Connect(endpoint);
-                clientSocket.Send(
-                    Encoding.UTF8.GetBytes(
-                        messageTextBox.Text));
+                // --------------------- соединение установлено ----------------------
+                // сервер начинает с приема данных, поэтому клиент начинает с посылки
+                // формируем объект-запрос
+                ClientRequest request = new()
+                {
+                    Action = "Message",
+                    Author = chatMessage.Author,
+                    Text   = chatMessage.Text,
+                    Moment = chatMessage.Moment
+                };
+                // преобразуем объект в JSON
+                String json = JsonSerializer.Serialize(request,           // Для Юникода в JSON
+                    new JsonSerializerOptions() {                         // используются \uXXXX
+                        Encoder = System.Text.Encodings.Web               // выражения. Чтобы 
+                        .JavaScriptEncoder.UnsafeRelaxedJsonEscaping });  // был обычный текст - Encoder
+                // отправляем на сервер
+                clientSocket.Send(Encoding.UTF8.GetBytes(json));
 
-                /* Д.З. ! Реализовать остановку сервера (если он включен)
-                 * при закрытии окна.
-                 * Реализовать отображение статуса сервера (ON | OFF)
-                 * *использовать разные цвета для разных статусов
-                 * **скопировать в кодах клиента процесс получения данных от 
-                 * сервера (стр. 80-90 сервера) [получение у клиента должно быть
-                 * после отправки]
-                 */
+                // после приема сервер отправляет подтверждение, клиент - получает
+                MemoryStream stream = new();               // Другой способ получения
+                do                                         // данных - собирать части
+                {                                          // бинарного потока в 
+                    int n = clientSocket.Receive(buffer);  // память.
+                    stream.Write(buffer, 0, n);            // Затем создать строку
+                } while (clientSocket.Available > 0);      // один раз пройдя
+                String str = Encoding.UTF8.GetString(      // все полученные байты.
+                    stream.ToArray());                     // 
+
+                chatLogs.Text += str + "\n";
 
                 clientSocket.Shutdown(SocketShutdown.Both);
                 clientSocket.Dispose();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 chatLogs.Text += ex.Message + "\n";
             }
-
         }
     }
 }
