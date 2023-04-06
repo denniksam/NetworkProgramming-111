@@ -20,6 +20,8 @@
             <TextBox x:Name="messageTextBox" Text="Hello!"/>
             <Button Content="Send" x:Name="SendButton"
                     Click="SendButton_Click"/>
+            <Button Content="Check" x:Name="CheckButton"
+                    Click="CheckButton_Click"/>
         </StackPanel>
         <TextBlock x:Name="chatLogs" 
                    Text="Chat Logs:&#10;"

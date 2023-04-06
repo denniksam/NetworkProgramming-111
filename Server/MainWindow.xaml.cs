@@ -92,9 +92,9 @@ namespace Server
                     } while (socket.Available > 0);  // Пока есть данные в сокете
                     
                     String str = sb.ToString();      // собираем все фрагменты в одну строку
-                    Dispatcher.Invoke(() =>          // Добавляем полученные данные к логам
-                        serverLogs.Text +=           // сервера. Используем Dispatcher
-                            str + "\n");             // для доступа к UI
+                    // Dispatcher.Invoke(() =>          // Добавляем полученные данные к логам
+                    //     serverLogs.Text +=           // сервера. Используем Dispatcher
+                    //         str + "\n");             // для доступа к UI
                     
                     // Разбираем JSON
                     var request = JsonSerializer.Deserialize<ClientRequest>(str);
@@ -115,6 +115,22 @@ namespace Server
                             // передаем его же как подтверждение получения
                             response.Status = "OK";
                             response.Messages = new() { message };
+                            Dispatcher.Invoke(() => serverLogs.Text += 
+                                $"{request.Moment.ToShortTimeString()} {request.Author}: {request.Text}\n");
+                            break;
+                        case "Get":
+                            String Author = request.Author;
+                            DateTime lastSyncMoment = request.Moment;
+                            // собираем сообщение НЕ данного автора, время которых старше lastSyncMoment
+                            response.Status = "OK";
+                            response.Messages = new();
+                            foreach(var m in messages)
+                            {
+                                if( ! m.Author.Equals(Author) && m.Moment > lastSyncMoment)
+                                {
+                                    response.Messages.Add(m);
+                                }
+                            }
                             break;
                         default:
                             response.Status = "Error";

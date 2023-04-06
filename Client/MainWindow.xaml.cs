@@ -25,14 +25,37 @@ namespace Client
     public partial class MainWindow : Window
     {
         private byte[] buffer = new byte[1024];
+        IPEndPoint? endpoint;
+        DateTime lastSyncMoment;
 
         public MainWindow()
         {
             InitializeComponent();
+            lastSyncMoment = DateTime.MinValue;
         }
 
         private void SendButton_Click(object sender, RoutedEventArgs e)
         {
+            if (endpoint is null)   // первое нажатие - определяем сервер
+            {
+                try
+                {
+                    IPAddress ip =               // На окне IP - это текст ("127.0.0.1")
+                        IPAddress.Parse(         // Для его перевода в число используется
+                            serverIp.Text);      // IPAddress.Parse
+                    int port =                   // Аналогично - порт
+                        Convert.ToInt32(         // парсим число из текста
+                            serverPort.Text);    // 
+                    endpoint =                   // endpoint - комбинация IP и порта
+                        new(ip, port);           // 
+                }
+                catch
+                {
+                    MessageBox.Show("Check server network parameters");
+                    return;
+                }
+            }
+
             ChatMessage chatMessage = new()
             {
                 Author = authorTextBox.Text,
@@ -44,23 +67,8 @@ namespace Client
 
         private void SendMessage(ChatMessage chatMessage)
         {
-            IPEndPoint endpoint;  // копия - как у сервера
-            try
-            {
-                IPAddress ip =               // На окне IP - это текст ("127.0.0.1")
-                    IPAddress.Parse(         // Для его перевода в число используется
-                        serverIp.Text);      // IPAddress.Parse
-                int port =                   // Аналогично - порт
-                    Convert.ToInt32(         // парсим число из текста
-                        serverPort.Text);    // 
-                endpoint =                   // endpoint - комбинация IP и порта
-                    new(ip, port);           // 
-            }
-            catch
-            {
-                MessageBox.Show("Check server network parameters");
-                return;
-            }
+            if (endpoint is null) return;
+
             Socket clientSocket = new(        // создаем сокет подключения
                 AddressFamily.InterNetwork,   // адресация IPv4
                 SocketType.Stream,            // Двусторонний сокет (и читать, и писать)
@@ -75,14 +83,16 @@ namespace Client
                 {
                     Action = "Message",
                     Author = chatMessage.Author,
-                    Text   = chatMessage.Text,
+                    Text = chatMessage.Text,
                     Moment = chatMessage.Moment
                 };
                 // преобразуем объект в JSON
                 String json = JsonSerializer.Serialize(request,           // Для Юникода в JSON
-                    new JsonSerializerOptions() {                         // используются \uXXXX
+                    new JsonSerializerOptions()
+                    {                         // используются \uXXXX
                         Encoder = System.Text.Encodings.Web               // выражения. Чтобы 
-                        .JavaScriptEncoder.UnsafeRelaxedJsonEscaping });  // был обычный текст - Encoder
+                        .JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                    });  // был обычный текст - Encoder
                 // отправляем на сервер
                 clientSocket.Send(Encoding.UTF8.GetBytes(json));
 
@@ -98,6 +108,61 @@ namespace Client
 
                 chatLogs.Text += str + "\n";
 
+                clientSocket.Shutdown(SocketShutdown.Both);
+                clientSocket.Dispose();
+            }
+            catch (Exception ex)
+            {
+                chatLogs.Text += ex.Message + "\n";
+            }
+        }
+
+        private void CheckButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Проверить есть ли новые сообщения
+            if (endpoint is null) return;
+
+            // новый запрос начинается с нового соединения
+            Socket clientSocket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            try
+            {
+                clientSocket.Connect(endpoint);
+                ClientRequest request = new()
+                {
+                    Action = "Get",
+                    Author = authorTextBox.Text,
+                    Moment = lastSyncMoment   // момент последней сверки сообщений
+                };
+                lastSyncMoment = DateTime.Now;   // обновляем момент последней сверки сообщений
+
+                // преобразуем объект в JSON
+                String json = JsonSerializer.Serialize(request,
+                    new JsonSerializerOptions()
+                    {
+                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                    });
+                // отправляем на сервер
+                clientSocket.Send(Encoding.UTF8.GetBytes(json));
+
+                // получаем ответ
+                MemoryStream stream = new();
+                do
+                {
+                    int n = clientSocket.Receive(buffer);
+                    stream.Write(buffer, 0, n);
+                } while (clientSocket.Available > 0);
+                String str = Encoding.UTF8.GetString(stream.ToArray());
+
+                // Декодируем его из JSON
+                var response = JsonSerializer.Deserialize<ServerResponse>(str);
+                if (response is not null && response.Messages is not null)
+                {
+                    foreach (var message in response.Messages)
+                    {
+                        chatLogs.Text += $"{message.Moment.ToShortTimeString()} {message.Author}: {message.Text}\n";
+
+                    }
+                }
                 clientSocket.Shutdown(SocketShutdown.Both);
                 clientSocket.Dispose();
             }
