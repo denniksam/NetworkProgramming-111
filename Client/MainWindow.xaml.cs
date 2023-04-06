@@ -25,36 +25,47 @@ namespace Client
     public partial class MainWindow : Window
     {
         private byte[] buffer = new byte[1024];
-        IPEndPoint? endpoint;
-        DateTime lastSyncMoment;
+        private IPEndPoint? endpoint;
+        private DateTime lastSyncMoment;
+        private Random random;
 
         public MainWindow()
         {
             InitializeComponent();
             lastSyncMoment = DateTime.MinValue;
+            random = new();
+        }
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            authorTextBox.Text = "User " + random.Next(1,100);
+            ReCheckMessages();
+        }
+
+        private IPEndPoint? InitEndpoint()
+        {
+            if (endpoint is not null) return endpoint;
+            try
+            {
+                IPAddress ip =               // На окне IP - это текст ("127.0.0.1")
+                    IPAddress.Parse(         // Для его перевода в число используется
+                        serverIp.Text);      // IPAddress.Parse
+                int port =                   // Аналогично - порт
+                    Convert.ToInt32(         // парсим число из текста
+                        serverPort.Text);    // 
+                endpoint =                   // endpoint - комбинация IP и порта
+                    new(ip, port);           // 
+                return endpoint;
+            }
+            catch
+            {
+                MessageBox.Show("Check server network parameters");
+                return null;
+            }
         }
 
         private void SendButton_Click(object sender, RoutedEventArgs e)
         {
-            if (endpoint is null)   // первое нажатие - определяем сервер
-            {
-                try
-                {
-                    IPAddress ip =               // На окне IP - это текст ("127.0.0.1")
-                        IPAddress.Parse(         // Для его перевода в число используется
-                            serverIp.Text);      // IPAddress.Parse
-                    int port =                   // Аналогично - порт
-                        Convert.ToInt32(         // парсим число из текста
-                            serverPort.Text);    // 
-                    endpoint =                   // endpoint - комбинация IP и порта
-                        new(ip, port);           // 
-                }
-                catch
-                {
-                    MessageBox.Show("Check server network parameters");
-                    return;
-                }
-            }
+            if ((endpoint = InitEndpoint()) is null) return;
 
             ChatMessage chatMessage = new()
             {
@@ -67,7 +78,7 @@ namespace Client
 
         private void SendMessage(ChatMessage chatMessage)
         {
-            if (endpoint is null) return;
+            if ((endpoint = InitEndpoint()) is null) return;
 
             Socket clientSocket = new(        // создаем сокет подключения
                 AddressFamily.InterNetwork,   // адресация IPv4
@@ -86,27 +97,28 @@ namespace Client
                     Text = chatMessage.Text,
                     Moment = chatMessage.Moment
                 };
-                // преобразуем объект в JSON
-                String json = JsonSerializer.Serialize(request,           // Для Юникода в JSON
-                    new JsonSerializerOptions()
-                    {                         // используются \uXXXX
-                        Encoder = System.Text.Encodings.Web               // выражения. Чтобы 
-                        .JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                    });  // был обычный текст - Encoder
-                // отправляем на сервер
-                clientSocket.Send(Encoding.UTF8.GetBytes(json));
 
-                // после приема сервер отправляет подтверждение, клиент - получает
-                MemoryStream stream = new();               // Другой способ получения
-                do                                         // данных - собирать части
-                {                                          // бинарного потока в 
-                    int n = clientSocket.Receive(buffer);  // память.
-                    stream.Write(buffer, 0, n);            // Затем создать строку
-                } while (clientSocket.Available > 0);      // один раз пройдя
-                String str = Encoding.UTF8.GetString(      // все полученные байты.
-                    stream.ToArray());                     // 
+                SendRequest(clientSocket, request);
+                var response = GetServerResponse(clientSocket);
 
-                chatLogs.Text += str + "\n";
+                if (response is not null && response.Messages is not null)
+                {
+                    var message = response.Messages[0];
+                    // chatLogs.Text += $"{message.Moment.ToShortTimeString()} {message.Author}: {message.Text}\n";
+                    Label messageLabel = new()
+                    {
+                        Content = message.Text,
+                        Background = Brushes.Salmon,
+                        Margin = new Thickness(10, 5, 10, 5),
+                        HorizontalAlignment = HorizontalAlignment.Right,
+                    };
+                    chatContainer.Children.Add(messageLabel);
+                    // Задание: свои сообщения выравнивать по правому краю, чужие - по левому
+                }
+                else
+                {
+                    chatLogs.Text += "Ошибка доставки сообщения";
+                }                    
 
                 clientSocket.Shutdown(SocketShutdown.Both);
                 clientSocket.Dispose();
@@ -117,10 +129,10 @@ namespace Client
             }
         }
 
-        private void CheckButton_Click(object sender, RoutedEventArgs e)
+        private async void ReCheckMessages()
         {
             // Проверить есть ли новые сообщения
-            if (endpoint is null) return;
+            if ((endpoint = InitEndpoint()) is null) return;
 
             // новый запрос начинается с нового соединения
             Socket clientSocket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -135,41 +147,69 @@ namespace Client
                 };
                 lastSyncMoment = DateTime.Now;   // обновляем момент последней сверки сообщений
 
-                // преобразуем объект в JSON
-                String json = JsonSerializer.Serialize(request,
-                    new JsonSerializerOptions()
-                    {
-                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                    });
-                // отправляем на сервер
-                clientSocket.Send(Encoding.UTF8.GetBytes(json));
+                SendRequest(clientSocket, request);
 
-                // получаем ответ
-                MemoryStream stream = new();
-                do
-                {
-                    int n = clientSocket.Receive(buffer);
-                    stream.Write(buffer, 0, n);
-                } while (clientSocket.Available > 0);
-                String str = Encoding.UTF8.GetString(stream.ToArray());
+                var response = GetServerResponse(clientSocket);
 
-                // Декодируем его из JSON
-                var response = JsonSerializer.Deserialize<ServerResponse>(str);
                 if (response is not null && response.Messages is not null)
                 {
                     foreach (var message in response.Messages)
                     {
-                        chatLogs.Text += $"{message.Moment.ToShortTimeString()} {message.Author}: {message.Text}\n";
-
+                        // chatLogs.Text += $"{message.Moment.ToShortTimeString()} {message.Author}: {message.Text}\n";
+                        Label messageLabel = new Label()
+                        {
+                            Content = message.Text,
+                            Background = Brushes.Lime,
+                            Margin = new Thickness(10, 5, 10, 5),
+                            HorizontalAlignment = HorizontalAlignment.Left,
+                        };
+                        chatContainer.Children.Add(messageLabel);
                     }
                 }
                 clientSocket.Shutdown(SocketShutdown.Both);
                 clientSocket.Dispose();
+
+                // цикл - отложенный перезапуск
+                await Task.Delay(1000);
+                ReCheckMessages();
             }
             catch (Exception ex)
             {
                 chatLogs.Text += ex.Message + "\n";
-            }
+            }            
         }
+        
+        private void SendRequest(Socket clientSocket, ClientRequest request)
+        {
+            // преобразуем объект в JSON
+            String json = JsonSerializer.Serialize(request,
+                new JsonSerializerOptions()
+                {
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                });
+            // отправляем на сервер
+            clientSocket.Send(Encoding.UTF8.GetBytes(json));
+        }
+
+        private ServerResponse? GetServerResponse(Socket clientSocket)
+        {
+            MemoryStream stream = new();               // Другой способ получения
+            do                                         // данных - собирать части
+            {                                          // бинарного потока в 
+                int n = clientSocket.Receive(buffer);  // память.
+                stream.Write(buffer, 0, n);            // Затем создать строку
+            } while (clientSocket.Available > 0);      // один раз пройдя
+                                                       // все полученные байты.
+            String str = Encoding.UTF8.GetString(stream.ToArray());
+            // Декодируем его из JSON
+            return JsonSerializer.Deserialize<ServerResponse>(str);
+        }
+
     }
 }
+/* Д.З. Закончить работу с проектом "Чат"
+ * - реализовать "умную" дату: если сообщение сегодня, то выводить только время
+ *    иначе и дату и время
+ * - реализовать перенос текста длинных сообщений на новые строки
+ *    **умный перенос - по пробелам (и другим разделителям)
+ */

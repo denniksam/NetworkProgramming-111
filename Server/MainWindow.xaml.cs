@@ -33,6 +33,11 @@ namespace Server
             messages = new();
         }
 
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            StartServer_Click(sender, e);
+        }
+
         private void StartServer_Click(object sender, RoutedEventArgs e)
         {
             IPEndPoint endpoint;
@@ -170,6 +175,7 @@ namespace Server
         {
             listenSocket?.Close();
         }
+
     }
 }
 /* Д.З. Клиент: проверить на пустоту тексты сообщения и имени автора.

@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Client"
         mc:Ignorable="d"
+        Loaded="Window_Loaded"
         Title="Client" Height="450" Width="300">
     <StackPanel Orientation="Vertical">
         <StackPanel Orientation="Horizontal">
@@ -20,9 +21,13 @@
             <TextBox x:Name="messageTextBox" Text="Hello!"/>
             <Button Content="Send" x:Name="SendButton"
                     Click="SendButton_Click"/>
-            <Button Content="Check" x:Name="CheckButton"
-                    Click="CheckButton_Click"/>
         </StackPanel>
+        <ScrollViewer Height="330">
+            <StackPanel x:Name="chatContainer"
+                        Orientation="Vertical">
+                
+            </StackPanel>
+        </ScrollViewer>
         <TextBlock x:Name="chatLogs" 
                    Text="Chat Logs:&#10;"
                    TextWrapping="Wrap"/>
