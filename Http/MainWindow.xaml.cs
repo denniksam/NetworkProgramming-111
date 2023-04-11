@@ -44,8 +44,55 @@ namespace Http
             HttpResponseMessage response =            // Более полная форма
                 await httpClient.SendAsync(request);  // ответа
 
+            printResponse(response);
+        }
+
+        private async void head3Button_Click(object sender, RoutedEventArgs e)
+        {
+            var response = await httpClient.SendAsync(
+                new HttpRequestMessage(
+                    HttpMethod.Head, 
+                    url3TextBox.Text));
+
+            printResponse(response);
+        }
+
+        private async void printResponse(HttpResponseMessage response)
+        {
             resultTextBlock.Text = $"HTTP/{response.Version} {(int)response.StatusCode} {response.ReasonPhrase}\n";
-            
+
+            foreach (var header in response.Headers)
+            {   // var - KeyValuePair<string,IEnumerable<string>>
+                String headerString = header.Key + ": ";
+                foreach (string value in header.Value)
+                {
+                    headerString += value + " ";
+                }
+                resultTextBlock.Text += $"{headerString}\n";
+            }
+            resultTextBlock.Text += "------------------------------------\n";
+            resultTextBlock.Text += await response.Content.ReadAsStringAsync();
+            resultTextBlock.Text += "\n------------------------------------\n";
+        }
+
+        private async void options4Button_Click(object sender, RoutedEventArgs e)
+        {
+            var response = await httpClient.SendAsync(
+                new HttpRequestMessage(
+                    HttpMethod.Options,
+                    url4TextBox.Text));
+
+            printResponse(response);
+        }
+
+        private async void get5Button_Click(object sender, RoutedEventArgs e)
+        {
+            var response = await httpClient.SendAsync(
+                new HttpRequestMessage(
+                    HttpMethod.Get,
+                    url5TextBox.Text));
+
+            printResponse(response);
         }
     }
 }
@@ -55,4 +102,31 @@ namespace Http
  * Выполнения запросов асинхронны, значит нужно применять соответствующие технологии
  * (async / await / ContinueWith)
  * httpClient.GetStringAsync - возвращает только тело
+ * httpClient.SendAsync - возвращает все данные, но в два приема
+ * 1) статус-код и заголовки
+ * 2) тело (контент)
+ * !! Для полного выполнения одного запроса идет два await
+ * response = await httpClient.SendAsync(request)
+ * ...
+ * body = await response.Content.ReadAsStringAsync();
+ * 
+ * Запросы методом HEAD возвращают только заголовки, тело - пустое
+ * такие запросы выполняются быстро и используються для проверки доступности
+ * сайта (ресурса)
+ * 
+ * Запрос OPTIONS разведывает какие дополнительные опции поддерживает 
+ * данный сайт. Обычно в ответе только заголовки с перечнем опций,
+ * например, допустимые методы запросов, допустимые заголовки (кроме стандартных)
+ * Браузеры автоматически посылают такие запросы перед тем, как
+ * отправить на сайт запросы любым методом, кроме GET, POST
+ * !! запрос из браузера методом DELETE - это два запроса
+ * 1) OPTIONS
+ * 2) по рез-ту ответа - DELETE (если ответ разрешил его использовать)
+ */
+/* Выполнить GET запрос на адрес https://www.random.org/passwords/?num=5&len=8&format=html&rnd=new
+ * При помощи поиска / регулярных выражений найти блок
+ * <p>Here are your random passwords:</p>
+ * И выделить данные из элементов 
+ * <li>FCu5k44P</li>
+ * Как результат показать 5 предложенных вариантов случайных паролей
  */

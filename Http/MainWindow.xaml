@@ -8,8 +8,8 @@
         Title="MainWindow" Height="450" Width="800">
     <Grid ShowGridLines="True">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition/>
-            <ColumnDefinition/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="2*"/>
         </Grid.ColumnDefinitions>
         
         <StackPanel Orientation="Vertical" Grid.Column="0">
@@ -22,12 +22,35 @@
                 <TextBox x:Name="url2TextBox" Text="https://itstep.org"/>
                 <Button x:Name="get2Button" Content="GET Full" Click="get2Button_Click"/>
             </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="20 10">
+                <TextBox x:Name="url3TextBox" Text="https://itstep.org"/>
+                <Button x:Name="head3Button" Content="HEAD" Click="head3Button_Click"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="20 10">
+                <TextBox x:Name="url4TextBox" Text="https://itstep.org"/>
+                <Button x:Name="options4Button" Content="OPTIONS" Click="options4Button_Click"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="20 10">
+                <TextBox x:Name="url5TextBox" Text="https://www.random.org/passwords/?num=5&amp;len=8&amp;format=html&amp;rnd=new"/>
+                <Button x:Name="get5Button" Content="GET" Click="get5Button_Click"/>
+            </StackPanel>
         </StackPanel>
         
-        <StackPanel Orientation="Vertical" Grid.Column="1">
-            <Label HorizontalAlignment="Center" FontWeight="DemiBold">Результат</Label>
-            <TextBlock x:Name="resultTextBlock"/>
-        </StackPanel>
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30"/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <Label Grid.Row="0"
+                   HorizontalAlignment="Center" 
+                   FontWeight="DemiBold">Результат</Label>
+            <ScrollViewer Grid.Row="1" 
+                          HorizontalScrollBarVisibility="Auto" 
+                          VerticalScrollBarVisibility="Auto">
+                <TextBlock x:Name="resultTextBlock"
+                           Margin="5"/>
+            </ScrollViewer>
+        </Grid>
         
     </Grid>
 </Window>
