@@ -1,0 +1,33 @@
+﻿<Window x:Class="Http.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Http"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid ShowGridLines="True">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        
+        <StackPanel Orientation="Vertical" Grid.Column="0">
+            <Label HorizontalAlignment="Center" FontWeight="DemiBold">Запросы</Label>
+            <StackPanel Orientation="Horizontal" Margin="20 10">
+                <TextBox x:Name="url1TextBox" Text="https://itstep.org"/>
+                <Button x:Name="get1Button" Content="GET" Click="get1Button_Click"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="20 10">
+                <TextBox x:Name="url2TextBox" Text="https://itstep.org"/>
+                <Button x:Name="get2Button" Content="GET Full" Click="get2Button_Click"/>
+            </StackPanel>
+        </StackPanel>
+        
+        <StackPanel Orientation="Vertical" Grid.Column="1">
+            <Label HorizontalAlignment="Center" FontWeight="DemiBold">Результат</Label>
+            <TextBlock x:Name="resultTextBlock"/>
+        </StackPanel>
+        
+    </Grid>
+</Window>
