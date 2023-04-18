@@ -29,7 +29,9 @@
         </Border>
         
         <ListView Grid.Row="1" Grid.Column="0" 
+                  x:Name="AssetsListView"
                   ItemsSource="{Binding Assets}"
+                  SelectionChanged="AssetsListView_SelectionChanged"
                   ScrollViewer.VerticalScrollBarVisibility="Auto">
             <ListView.View>
                 <GridView>
