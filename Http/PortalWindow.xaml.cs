@@ -60,5 +60,10 @@ namespace Http
         {
             new ApiWindow().Show();
         }
+
+        private void ApiCoincap_Click(object sender, RoutedEventArgs e)
+        {
+            new CoincapWindow().Show();
+        }
     }
 }
