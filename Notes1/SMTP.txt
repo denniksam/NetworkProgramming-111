@@ -1,0 +1,46 @@
+SMTP - Simple Mail Transfer Protocol - протокол отправки электронной почты
+Многошаговый протокол для отправки почты
+Идея - обмен кодами и текстовыми сообщениями
+
+Создаем аккаунт (на примере Гугл)
+- создаем новый
+- включаем двухэтапную аутентификацию
+- переходим в безопасность-двухэтапная аутентификация-пароли приложений
+- генерируем пароль для: приложение-почта, устройство-комп Windows (или как есть)
+- копируем созданный пароль (второй раз он не отобразится)
+
+Особенность - наличие секретных данных, которые не нужно отправлять в 
+public репозиторий
+- создаем файл emailconfig.json
+- добавляем в него данные smtp провайдера ("email" и "password" заменить на свои)
+{
+  "smtp": {
+    "gmail": {
+      "host": "smtp.gmail.com",
+      "port": 587,
+      "email": "my_account@gmail.com",
+      "password": "applicationcode",
+      "ssl": true
+    }
+  }
+}
+- исключаем файл из репозитория (ПКМ - Git - Ignore)
+- в свойствах файла задаем "Copy to output directory" - "Copy if newer"
+- создаем образец для репозитория
+emailconfig-example.json
+{
+  "smtp": {
+    "gmail": {
+      "host": "smtp.gmail.com",
+      "port": 587,
+      "email": "CHANGE ME",
+      "password": "CHANGE ME",
+      "ssl": true
+    }
+  }
+}
+- Добавляем в файл-описание readme.md инструкцию
+After cloning rename ```emailconfig-example.json``` to ```emailconfig.json```
+and change credentials for smtp
+
+Дальнейшие комментарии см. в кодах SmtpWindow

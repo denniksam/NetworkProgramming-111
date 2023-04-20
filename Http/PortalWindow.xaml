@@ -35,5 +35,10 @@
                 FontSize="18"
                 Margin="10 10 30 10"
                 Click="ApiCoincap_Click"/>
+        <Button x:Name="SmtpButton"
+                Content="6. SMTP, E-Mail"
+                FontSize="18"
+                Margin="10 10 30 10"
+                Click="SmtpButton_Click"/>
     </StackPanel>
 </Window>
