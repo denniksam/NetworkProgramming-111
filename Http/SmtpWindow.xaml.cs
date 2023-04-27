@@ -222,8 +222,80 @@ namespace Http
             }
             return result;
         }
+
+        private void SendImageButton_Click(object sender, RoutedEventArgs e)
+        {
+            using SmtpClient smtpClient = GetSmtpClient();
+            JsonElement gmail = emailConfig.GetProperty("smtp").GetProperty("gmail");
+            String mailbox = gmail.GetProperty("email").GetString()!;
+            MailMessage mailMessage = new MailMessage()
+            {
+                From = new MailAddress(mailbox),
+                Body = "<u>Test</u> <i>message</i> from <b style='color:green'>SmtpWindow</b>",
+                IsBodyHtml = true,
+                Subject = "Test Message"
+            };
+            mailMessage.To.Add(new MailAddress("denniksam@gmail.com"));
+
+            /* Attachment - приложение к письму
+                По традициям сетевого программирования, если посылка (пакет)
+                содержит в себе приложения (добавочный контент), то
+                в нем обязательно должно быть указано тип этого приложения
+                (ContentType)
+                Для стандартизации введен перечень типов MIME-Types
+                Обычно эти типы определяются по расширению файла-приложения
+            */
+            String filename = "NP.png";
+            if (!System.IO.File.Exists(filename))
+            {
+                MessageBox.Show($"File '{filename}' not found");
+                return;
+            }
+            String mimeType = System.IO.Path.GetExtension(filename)
+                switch
+                {
+                    ".png"  => "image/png",
+                    ".jpg"  => "image/jpeg",
+                    ".jpeg" => "image/jpeg",
+                    ".gif"  => "image/gif",
+                    ".webp" => "image/webp",
+                    ".doc"  => "application/msword",
+                    ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    ".xls"  => "application/vnd.ms-excel",
+                    ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    ".pdf"  => "application/pdf",
+                    ".ppt"  => "application/vnd.ms-powerpoint",
+                    ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    ".zip"  => "application/zip",
+                    ".rar"  => "application/vnd.rar",
+                    ".7z"   => "application/x-7z-compressed",
+                    ".mp3"  => "audio/mpeg",
+                    ".wav"  => "audio/wav",
+                    ".mp4"  => "video/mp4",
+                    ".avi"  => "video/x-msvideo",
+                    ".txt"  => "text/plain",
+
+                    _ => "application/octet-stream"
+                };
+
+            mailMessage.Attachments.Add(
+                new Attachment(filename, mimeType));
+
+            try
+            {
+                smtpClient.Send(mailMessage);
+                MessageBox.Show("Sent OK");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Sent error '{ex.Message}'");
+            }
+        }
     }
 }
+/* Реализовать возможность выбора файла для отправки по почте - 
+ * использовать файловый диалог, выбрать файл и отправить.
+ */
 /* Д.З. Реализовать генератор кодов - случайных N-символьных строк,
  * состоящих из цифр и малых букв, не похожих на цифры (без о, l, z)
  * Использовать N=6 и отправить на почту письмо со случайным кодом

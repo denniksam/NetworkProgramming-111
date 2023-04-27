@@ -45,7 +45,11 @@
                             Click="ConfirmButton_Click"/>
                     <TextBox x:Name="ConfirmTextbox"/>
                 </DockPanel>
-                
+
+                <Button x:Name="SendImageButton"
+                        Content="Отправить картинку"
+                        Click="SendImageButton_Click"
+                        Margin="20 10"/>
             </StackPanel>
             
         </Border>
