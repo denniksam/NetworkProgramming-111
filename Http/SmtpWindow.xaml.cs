@@ -30,11 +30,20 @@ namespace Http
         public SmtpWindow()
         {
             InitializeComponent();
-            _dataContext = new();
+            _dataContext = App.DataContext;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            if(App.AuthUser is null)
+            {
+                MessageBox.Show("Неавторизованный доступ");
+                Close();
+                return;
+            }
+            UserNameTextbox.Text = App.AuthUser.Name;
+            UserEmailTextbox.Text = App.AuthUser.Email;
+
             /* Открываем файл конфигурации и пытаемся извлечь данные */
             String configFilename = "emailconfig.json";
             try
@@ -66,19 +75,15 @@ namespace Http
             }
 
 
-            // проверяем, есть ли в БД пользователь с параметрами из полей окна
-            NpUser? user = _dataContext.NpUsers.FirstOrDefault(
-                    u => u.Name == UserNameTextbox.Text &&
-                         u.Email == UserEmailTextbox.Text);
-            if(user is null)
+            if(App.AuthUser.ConfirmCode is null)
             {
                 ConfirmDockPanel.Visibility = Visibility.Collapsed;
             }
             else
             {
                 ConfirmDockPanel.Visibility = Visibility.Visible;
-                RegisterButton.IsEnabled = false;
             }
+            RegisterButton.IsEnabled = false;
         }
 
         private SmtpClient GetSmtpClient()

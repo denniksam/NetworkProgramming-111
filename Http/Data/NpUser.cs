@@ -12,6 +12,7 @@ namespace Http.Data
         public String Name { get; set; } = null!;
         public String Email { get; set; } = null!;
         public String? ConfirmCode { get; set; }
-
+        public String Login { get; set; } = null!;
+        public String Password { get; set; } = null!;
     }
 }
